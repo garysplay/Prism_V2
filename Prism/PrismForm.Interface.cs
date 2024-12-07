@@ -46,7 +46,13 @@ namespace Prism
 		private readonly ToolStripMenuItem _bDumpAsObjQuick;
 		private readonly ToolStripMenuItem _bDumpAsObjAs;
 
-		private readonly TextBox _searchTextBox;
+		private readonly ToolStripMenuItem _bToggleTheme;
+
+        private readonly ToolStripMenuItem _bDumpAsSoundHeader;
+        private readonly ToolStripMenuItem _bDumpAsWemQuick;
+        private readonly ToolStripMenuItem _bDumpAsWemAs;
+
+        private readonly TextBox _searchTextBox;
 		private readonly TreeListView _assetList;
 
 		private readonly MinimalSplitContainer _splitContainer;
@@ -59,7 +65,7 @@ namespace Prism
 
 		private PrismSettings _settings;
 
-		public PrismForm()
+        public PrismForm()
 		{
 			SuspendLayout();
 
@@ -170,8 +176,9 @@ namespace Prism
 						Text = "&View",
 						DropDownItems =
 						{
-							(_bResetViewport = new ToolStripMenuItem("&Reset 3D Viewport"))
-						}
+							(_bResetViewport = new ToolStripMenuItem("&Reset 3D Viewport")),
+							(_bToggleTheme = new ToolStripMenuItem("&Dark Theme"))
+                        }
 					}
 				}
 			});
@@ -226,13 +233,14 @@ namespace Prism
 			{
 				using var ofd = new OpenFileDialog
 				{
-					Filter = "Forge Files|*.forge"
+					Filter = "Forge Files|*.forge",
+					Multiselect = true
 				};
 
 				if (ofd.ShowDialog() != DialogResult.OK)
 					return;
 
-				OpenForge(ofd.FileName);
+				OpenForge(ofd.FileNames);
 			};
 
 			_bGenerateFilelist.Click += (sender, args) =>
@@ -259,7 +267,13 @@ namespace Prism
 					_settings = PrismSettings.Load(SETTINGS_FILENAME);
 			};
 
-			_bDumpAsBinQuick.Click += CreateDumpEventHandler(DumpSelectionAsBin);
+            _bToggleTheme.Click += (sender, args) =>
+            {
+                _isDarkTheme = !_isDarkTheme;
+                ApplyTheme();
+            };
+
+            _bDumpAsBinQuick.Click += CreateDumpEventHandler(DumpSelectionAsBin);
 			_bDumpAsBinAs.Click += CreateDumpEventHandler(DumpSelectionAsBin, true);
 
 			_bDumpAsDdsQuick.Click += CreateDumpEventHandler(DumpSelectionAsDds);
@@ -270,7 +284,7 @@ namespace Prism
 
 			_bDumpAsObjQuick.Click += CreateDumpEventHandler(DumpSelectionAsObj);
 			_bDumpAsObjAs.Click += CreateDumpEventHandler(DumpSelectionAsObj, true);
-
+			
 			_bResetViewport.Click += (sender, args) => _renderer3d.ResetView();
 
 			SetupRenderer();
@@ -304,7 +318,6 @@ namespace Prism
 				}
 			};
 		}
-
 		private void SetPreviewPanel(Control control)
 		{
 			using (_splitContainer.Panel2.SuspendPainting())
@@ -388,13 +401,19 @@ namespace Prism
 						var m = (Magic)type;
 						if (m == Magic.Metadata)
 						{
-							var container = _openedForge.GetContainer(uid);
-							switch (container)
+							// Find the forge that contains this entry
+							var forge = _openedForges.FirstOrDefault(f => 
+								f.Entries.Any(e => e.Uid == uid));
+								
+							if (forge != null)
 							{
-								case Hash:
+								var container = forge.GetContainer(uid);
+								if (container is Hash)
 									return $"[{nameof(Hash)}]";
-								case Descriptor:
+								if (container is Descriptor)
 									return $"[{nameof(Descriptor)}]";
+								if (container is ForgeAsset)
+									return m.ToString();
 							}
 						}
 
@@ -446,67 +465,115 @@ namespace Prism
 				if (model is not Entry e || MagicHelper.GetFiletype(e.MetaData.FileType) != AssetType.FlatArchive)
 					return null;
 
-				var container = _openedForge.GetContainer(e.Uid);
+				// Find the forge that contains this entry
+				var forge = _openedForges.FirstOrDefault(f => 
+					f.Entries.Any(entry => entry.Uid == e.Uid));
+					
+				if (forge == null) return null;
+
+				var container = forge.GetContainer(e.Uid);
 				if (container is not ForgeAsset forgeAsset) throw new InvalidDataException("Container is not asset");
 
-				var assetStream = forgeAsset.GetDataStream(_openedForge);
-				var fa = FlatArchive.Read(assetStream, _openedForge.Version);
+				var assetStream = forgeAsset.GetDataStream(forge);
+				var fa = FlatArchive.Read(assetStream, forge.Version);
 
 				foreach (var entry in fa.Entries) _flatArchiveEntryMap[entry.MetaData.Uid] = e.Uid;
 
 				return fa.Entries;
 			};
 
-			_assetList.CellRightClick += (sender, args) =>
+		// In the CellRightClick handler (around line 481), modify the context menu creation:
+
+		_assetList.CellRightClick += (sender, args) =>
+		{
+			var tlv = (TreeListView)sender;
+			var selectedObjects = tlv.SelectedObjects;
+			if (selectedObjects.Count < 1) return;
+
+			var filenameText = "";
+			var uidText = "";
+			var magicText = "";
+
+			foreach (var o in selectedObjects)
 			{
-				var tlv = (TreeListView)sender;
+				var meta = GetAssetMetaData(o);
+				if (meta == null) continue;
 
-				var filenameText = "";
-				var uidText = "";
-				var magicText = "";
+				if (filenameText.Length == 0)
+					filenameText = meta.Filename;
+				else
+					filenameText += $"\n" + meta.Filename;
 
-				foreach (var o in tlv.SelectedObjects)
-				{
-					var meta = GetAssetMetaData(o);
+				var uidStr = $"0x{meta.Uid:X16}";
+				if (uidText.Length == 0)
+					uidText = uidStr;
+				else
+					uidText += $"\n" + uidStr;
 
-					if (filenameText.Length == 0)
-						filenameText = meta.Filename;
-					else
-						filenameText += $"\n" + meta.Filename;
+				var magicStr = $"0x{meta.Magic:X8}";
+				if (magicText.Length == 0)
+					magicText = magicStr;
+				else
+					magicText += $"\n" + magicStr;
+			}
 
-					var uidStr = $"0x{meta.Uid:X16}";
-					if (uidText.Length == 0)
-						uidText = uidStr;
-					else
-						uidText += $"\n" + uidStr;
+			var stream = GetAssetStream(selectedObjects[0]);
+			var type = stream != null ? MagicHelper.GetFiletype(stream.MetaData.Magic) : AssetType.Unknown;
 
-					var magicStr = $"0x{meta.Magic:X8}";
-					if (magicText.Length == 0)
-						magicText = magicStr;
-					else
-						magicText += $"\n" + magicStr;
-				}
-
-				var bCopyName = new ToolStripMenuItem("&Copy Name");
-				bCopyName.Click += (o, eventArgs) => Clipboard.SetText(filenameText);
-
-				var bCopyUid = new ToolStripMenuItem("&Copy UID");
-				bCopyUid.Click += (o, eventArgs) => Clipboard.SetText(uidText);
-
-				var bCopyFiletype = new ToolStripMenuItem("&Copy Filetype");
-				bCopyFiletype.Click += (o, eventArgs) => Clipboard.SetText(magicText);
-
-				args.MenuStrip = new ContextMenuStrip
-				{
-					Location = Cursor.Position,
-					Items =
-					{
-						bCopyName,
-						bCopyUid,
-						bCopyFiletype
-					}
-				};
+			var contextMenu = new ContextMenuStrip
+			{
+				Location = Cursor.Position,
+				BackColor = _isDarkTheme ? _darkControlBackColor : SystemColors.Control,
+				ForeColor = _isDarkTheme ? _darkForeColor : SystemColors.ControlText
 			};
+
+			// Copy options
+			var bCopyName = new ToolStripMenuItem("Copy Name") { BackColor = contextMenu.BackColor, ForeColor = contextMenu.ForeColor };
+			var bCopyUid = new ToolStripMenuItem("Copy UID") { BackColor = contextMenu.BackColor, ForeColor = contextMenu.ForeColor };
+			var bCopyFiletype = new ToolStripMenuItem("Copy Filetype") { BackColor = contextMenu.BackColor, ForeColor = contextMenu.ForeColor };
+
+			bCopyName.Click += (o, eventArgs) => Clipboard.SetText(filenameText);
+			bCopyUid.Click += (o, eventArgs) => Clipboard.SetText(uidText);
+			bCopyFiletype.Click += (o, eventArgs) => Clipboard.SetText(magicText);
+
+			// Export options
+			var exportMenu = new ToolStripMenuItem("Export") { BackColor = contextMenu.BackColor, ForeColor = contextMenu.ForeColor };
+			
+			var bExportBin = new ToolStripMenuItem("Binary File (*.bin)") { BackColor = contextMenu.BackColor, ForeColor = contextMenu.ForeColor };
+			bExportBin.Click += (o, eventArgs) => DumpSelectionAsBin(_settings.QuickExportLocation, selectedObjects[0]);
+
+			if (type == AssetType.Texture)
+			{
+				var bExportDds = new ToolStripMenuItem("DirectDraw Surface (*.dds)") { BackColor = contextMenu.BackColor, ForeColor = contextMenu.ForeColor };
+				var bExportPng = new ToolStripMenuItem("PNG (*.png)") { BackColor = contextMenu.BackColor, ForeColor = contextMenu.ForeColor };
+				
+				bExportDds.Click += (o, eventArgs) => DumpSelectionAsDds(_settings.QuickExportLocation, selectedObjects[0]);
+				bExportPng.Click += (o, eventArgs) => DumpSelectionAsPng(_settings.QuickExportLocation, selectedObjects[0]);
+				
+				exportMenu.DropDownItems.Add(bExportDds);
+				exportMenu.DropDownItems.Add(bExportPng);
+			}
+
+			if (type == AssetType.Mesh)
+			{
+				var bExportObj = new ToolStripMenuItem("Wavefront OBJ (*.obj)") { BackColor = contextMenu.BackColor, ForeColor = contextMenu.ForeColor };
+				bExportObj.Click += (o, eventArgs) => DumpSelectionAsObj(_settings.QuickExportLocation, selectedObjects[0]);
+				exportMenu.DropDownItems.Add(bExportObj);
+			}
+
+			exportMenu.DropDownItems.Add(bExportBin);
+
+			contextMenu.Items.AddRange(new ToolStripItem[]
+			{
+				bCopyName,
+				bCopyUid,
+				bCopyFiletype,
+				new ToolStripSeparator(),
+				exportMenu
+			});
+
+			args.MenuStrip = contextMenu;
+		};
 
 			_searchTextBox.TextChanged += (sender, args) =>
 			{
@@ -554,7 +621,7 @@ namespace Prism
 		{
 			if (_assetList.SelectedObjects.Count < 1) return;
 			var selectedEntry = _assetList.SelectedObjects[0]; // TODO: find a way to get the last selected index to preview the latest selected asset
-			lock (_openedForge)
+			lock (_openedForges)
 			{
 				var stream = GetAssetStream(selectedEntry);
 				if (stream != null)
@@ -605,3 +672,4 @@ namespace Prism
 		}
 	}
 }
+

@@ -23,6 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\RainbowScimitar\RainbowScimitar.csproj" />
         <ProjectReference Include="..\RainbowForge\RainbowForge.csproj" />
     </ItemGroup>
 
