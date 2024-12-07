@@ -62,5 +62,4 @@
         <None Remove="Resources\bone.obj" />
         <EmbeddedResource Include="Resources\bone.obj" />
     </ItemGroup>
-
 </Project>
