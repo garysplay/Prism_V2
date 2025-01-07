@@ -35,7 +35,6 @@ namespace RainbowScimitar.Scimitar
 						}
 						case CompressionMethod.Oodle:
 						{
-							OodleHelper.EnsureOodleLoaded();
 
 							var compressed = new byte[size.SerializedSize];
 							bundleStream.Read(compressed, 0, compressed.Length);
@@ -96,7 +95,6 @@ namespace RainbowScimitar.Scimitar
 					}
 					case CompressionMethod.Oodle:
 					{
-						OodleHelper.EnsureOodleLoaded();
 
 						var uncompressedData = new byte[msChunk.Length];
 						msChunk.Read(uncompressedData, 0, uncompressedData.Length);
