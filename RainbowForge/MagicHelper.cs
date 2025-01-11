@@ -33,7 +33,6 @@ namespace RainbowForge
 
 			return (Magic)magic switch
 			{
-				Magic.Metadata => AssetType.FlatArchive,
 				Magic.CompiledMeshObject => AssetType.Mesh,
 				Magic.CompiledLowResolutionTextureMap => AssetType.Texture,
 				Magic.CompiledMediumResolutionTextureMap => AssetType.Texture,

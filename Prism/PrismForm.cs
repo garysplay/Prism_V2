@@ -430,24 +430,24 @@ namespace Prism
                         switch ((Magic)assetStream.MetaData.Magic)
                         {
                             case Magic.Mesh:
-                            {
-                                using var stream = assetStream.StreamProvider.Invoke();
-                                var mp = Mesh.Read(stream);
-
-                                entries = new List<TreeListViewEntry>
                                 {
-                                    CreateMetadataInfoNode(assetStream),
-                                    new(nameof(Mesh), null,
-                                        new TreeListViewEntry("Var1", mp.Var1),
-                                        new TreeListViewEntry("Var2", mp.Var2),
-                                        new TreeListViewEntry("Mesh UID", $"{mp.CompiledMeshObjectUid:X16}"),
-                                        new TreeListViewEntry(nameof(Mesh.Bones), null,
-                                            mp.Bones.Select(arg => new TreeListViewEntry("ID", $"{(Enum.IsDefined(typeof(BoneId), arg.Id) ? arg.Id : $"{(uint)arg.Id:X8}")}")).ToArray()),
-                                        new TreeListViewEntry(nameof(Mesh.Materials), null, mp.Materials.Select(arg => new TreeListViewEntry("UID", $"{arg:X16}")).ToArray())
-                                    )
-                                    };
+                                    using var stream = assetStream.StreamProvider.Invoke();
+                                    var mp = Mesh.Read(stream);
+
+                                    entries = new List<TreeListViewEntry>
+                            {
+                                CreateMetadataInfoNode(assetStream),
+                                new(nameof(Mesh), null,
+                                    new TreeListViewEntry("Var1", mp.Var1),
+                                    new TreeListViewEntry("Var2", mp.Var2),
+                                    new TreeListViewEntry("Mesh UID", $"{mp.CompiledMeshObjectUid:X16}"),
+                                    new TreeListViewEntry(nameof(Mesh.Bones), null,
+                                        mp.Bones.Select(arg => new TreeListViewEntry("ID", $"{(Enum.IsDefined(typeof(BoneId), arg.Id) ? arg.Id : $"{(uint)arg.Id:X8}")}")).ToArray()),
+                                    new TreeListViewEntry(nameof(Mesh.Materials), null, mp.Materials.Select(arg => new TreeListViewEntry("UID", $"{arg:X16}")).ToArray())
+                                )
+                            };
                                     break;
-                            }
+                                }
                             case Magic.ShaderCodeModuleUserMaterial:
                             case Magic.ShaderCodeModulePostPro:
                                 {

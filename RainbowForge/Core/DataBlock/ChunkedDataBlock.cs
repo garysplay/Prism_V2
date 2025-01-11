@@ -34,6 +34,7 @@ namespace RainbowForge.Core.DataBlock
 				{
 					if (UseOodle)
 					{
+						OodleHelper.EnsureOodleLoaded();
 
 						// Contents are compressed
 						var compressed = r.ReadBytes((int)chunk.SerializedLength);
