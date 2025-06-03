@@ -52,17 +52,22 @@ namespace RainbowForge.Image
 
 			var dataStart = r.BaseStream.Position;
 
-			var texFormat = r.ReadUInt32(); // [0x00]
-			var x04 = r.ReadUInt32(); // 1
-			var x08 = r.ReadUInt32();
-			var texType = (TextureType)r.ReadUInt32(); // [0x0C] see docstring for details
-			var x10 = r.ReadUInt32();
-			var x14 = r.ReadUInt32();
-			var x18 = r.ReadUInt32();
-			var x1C = r.ReadUInt32(); // 0
-			var x20 = r.ReadUInt32(); // 0
-			var x24 = r.ReadUInt32(); // 0
-			var containerId = r.ReadUInt32(); // [0x28] container id
+            var texFormat = 0u;
+            var texType = (TextureType)0; ;
+            if (version < 32)
+            {
+                texFormat = r.ReadUInt32(); // [0x00]
+                var x04 = r.ReadUInt32(); // 1
+                var x08 = r.ReadUInt32();
+                texType = (TextureType)r.ReadUInt32(); // [0x0C] see docstring for details
+                var x10 = r.ReadUInt32();
+                var x14 = r.ReadUInt32();
+                var x18 = r.ReadUInt32();
+                var x1C = r.ReadUInt32(); // 0
+            }
+            var x20 = r.ReadUInt32(); // 0
+            var x24 = r.ReadUInt32(); // 0
+            var containerId = r.ReadUInt32(); // [0x28] container id
 			MagicHelper.AssertEquals(Magic.CompiledTextureMapData, containerId);
 
 			var data1 = r.ReadByte(); // [0x2C]
@@ -72,26 +77,42 @@ namespace RainbowForge.Image
 
 			var x30 = r.ReadUInt32(); // 7
 			var ddsStart = r.BaseStream.Position;
-			r.BaseStream.Seek(-0x29, SeekOrigin.End);
-			var end = r.BaseStream.Position;
-			var texsize = end - ddsStart;
+            if (version < 32)
+            {
+                r.BaseStream.Seek(-0x29, SeekOrigin.End);
+            }
+            if (version >= 32)
+            {
+                r.BaseStream.Seek(-0x49, SeekOrigin.End);
+            }
+            var end = r.BaseStream.Position;
+            var texsize = end - ddsStart;
 
 			var w = r.ReadUInt32();
 			var h = r.ReadUInt32();
 
-			// eN notation is same hex offset, e just means 'end' because those
-			// values go after the actual dds blob
-			var e8 = r.ReadUInt32(); // 1
-			var eC = r.ReadUInt32(); // 0
-			var chan = r.ReadUInt32();
-			var e14 = r.ReadUInt32();
-			var mips = r.ReadUInt32();
-			var e1C = r.ReadUInt32();
-			var e20 = r.ReadUInt32(); // 7
-			var e24 = r.ReadUInt32(); // 7
-			var e28 = r.ReadByte(); // 1
+            // eN notation is same hex offset, e just means 'end' because those
+            // values go after the actual dds blob
+            var e8 = r.ReadUInt32(); // 1
+            var eC = r.ReadUInt32(); // 0
+            var chan = r.ReadUInt32();
+            var e14 = r.ReadUInt32();
+            var mips = r.ReadUInt32();
+            var e1C = r.ReadUInt32();
+            if (version >= 32)
+            {
+                texFormat = r.ReadUInt32(); // [0x00]
+                var x04 = r.ReadUInt32(); // 1
+                var x08 = r.ReadUInt32();
+                texType = (TextureType)r.ReadUInt32(); // [0x0C] see docstring for details
+                var x10 = r.ReadUInt32();
+                var x14 = r.ReadUInt32();
+                var x18 = r.ReadUInt32();
+                var x1C = r.ReadUInt32(); // 0
+            }
+            var e20 = r.ReadUInt32(); // 7
 
-			r.BaseStream.Seek(ddsStart, SeekOrigin.Begin);
+            r.BaseStream.Seek(ddsStart, SeekOrigin.Begin);
 
 			var powChan = Math.Pow(2, chan);
 			var width = (int)Math.Floor(w / powChan);
