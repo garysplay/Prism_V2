@@ -63,7 +63,7 @@
         <None Remove="Resources\uv_debug.png" />
         <EmbeddedResource Include="Resources\uv_debug.png" />
         <None Remove="Resources\bone.obj" />
-        <Content Include="Prism.ico" />
+        <EmbeddedResource Include="Prism.ico" />
         <EmbeddedResource Include="Resources\bone.obj" />
     </ItemGroup>
     

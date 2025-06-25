@@ -83,6 +83,18 @@ namespace Prism
             ClientSize = new Size(1000, 600); // Slightly larger default window size
             Text = "Prism";
 
+            try
+            {
+                this.Icon = new Icon(typeof(PrismForm), "Prism.ico");
+            }
+            catch (Exception ex)
+            {
+                // Log the exception or display a message if the icon cannot be loaded
+                Console.WriteLine($"Error loading icon: {ex.Message}");
+                // Optionally, fall back to a default icon or no icon
+                this.Icon = SystemIcons.Application; // Example: fall back to a default system icon
+            }
+
             // Initialize the split container
             _splitContainer = new MinimalSplitContainer
             {
@@ -192,7 +204,7 @@ namespace Prism
                     {
                         Text = "&File",
                         DisplayStyle = ToolStripItemDisplayStyle.Text, // Ensure only text is shown
-						DropDownItems =
+                        DropDownItems =
                         {
                             (_bOpenForge = new ToolStripMenuItem("&Open Forge")
                             {
