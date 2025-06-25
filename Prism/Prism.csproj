@@ -5,6 +5,9 @@
         <TargetFramework>net9.0-windows7.0</TargetFramework>
         <UseWindowsForms>true</UseWindowsForms>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <UseWPF>True</UseWPF>
+        <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
+        <ApplicationIcon>Prism.ico</ApplicationIcon>
     </PropertyGroup>
 
     <ItemGroup>
@@ -60,6 +63,7 @@
         <None Remove="Resources\uv_debug.png" />
         <EmbeddedResource Include="Resources\uv_debug.png" />
         <None Remove="Resources\bone.obj" />
+        <Content Include="Prism.ico" />
         <EmbeddedResource Include="Resources\bone.obj" />
     </ItemGroup>
     
